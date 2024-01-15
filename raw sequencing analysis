@@ -1,0 +1,192 @@
+## Fastq files: is a kind of input file for quality controls by FASTqc program
+## FastA files:reference genome then input it to indexer which contain hash code
+## Hisat2 : making SAM file based on the input data contain: reads, chromozome name, and location. then to BAM( compressed file)
+## SAM tool: prcessing of SAM files such as sorting(based on chromosome locations)
+## htseq-count: how many reads to each gene alignment then prepare for the analyzing by R
+### analyzing: normalization : by fpkm or DEseq2 based on the read number allignment( some long genes have more reads even with the same expression with another shorter length genes so normalization to resolve this process)
+##SAM: Offers human-readability and easier initial exploration, but with larger file size and slower processing.
+##BAM: Saves storage space and speeds up analysis, but requires specialized tools for interpretation.
+
+## to start process with terminal we need to connect to a server:
+
+sudo apt-get install open ssh-server        ###sudo: super user do as an admin   ###installing SSH
+ssh -p 2222 bio@127.0.0.1      ###2222 is the port, bio is username here, 127... is the ip server of the host to connect to the server
+
+
+## installing FASTqc: search in google for babraham then download the Win/linux then copy link location:
+cd ~            ###go to home directory
+mkdir apps
+cd apps
+wget url        #### wget to download    ###url: paste the url instead of url
+ls
+unzip ....      ###our file name which present in ls type here
+ls
+rm fas...zip    ###remove zip file which unzip previously and do not need that
+ls
+cd Fastqc
+ls -l         ##to showing more information::
+## d for folder  r for read files    w for allowing writing   x for executing permission   so rwxr-xr-- : for user or admin allow all parts(rwx)    r-x Members of the group have read and execute permissions, but not write    r--  other have only read permission   ### for change the permission : chmod U+x fastqc (user can execute the fastqc file) or U-x for limit permission,,,,  chmod Og-rwx fastqc: cahnge mode other group for not allowed to rwx
+./fastqc    ##. in current folder   ## / seperator 
+#### for reading the file: 
+### 1) ~/apps/FastQC/fastqc
+### 2) cd~    then     mkdir bin #make binary containing the executive files    then    cd bin  then   ls   #empty now     then      ln -s ~/apps/FastQC/fastqc .    ##. mean here   ###ln mean link   ###-s mean symbolic not paste here and show as a shortcut    then    ls     then    ~/bin/fastqc   ###for running faster      then for show this code in editor page    nano ~/.bash_profile  ##or .profile  ##. here mean hidden file ##nano mean editor file  ###PATH = $Home/bin: $Home/.local/bin: $PATH  ###if non of this code not present in nano we should add
+
+### installing hisat2: jhu.edu in google, release in right side, last version for linux, copy link location
+cd ~/Apps
+wget url
+ls
+unzip "filename"
+rm "zipfile name"
+cd hisat...
+ls
+cd ~/bin
+ln -s ~/Apps/hisat2.../hisat* .   ### different kind of hisat file present here
+cd ~
+mv ~/Downloads/* apps/  ### * all downloads files go to apps
+
+### then like previous process install Trimmomatic, Htseqcount, Samtool
+### for referencce genome: UCSC genome browser, Downloads , Genome data, Human, hg38, ref file, fulldataset is whole genome, Dataset by chr for each chr and download chr X data and make proj file
+
+~ /proj
+ls
+cd chrX
+ls
+cd chrx_data
+ls
+cd genome
+ls
+cd genome
+ls
+vim chrx.fa
+
+### in ucsc website, tools, table browser, clade:mamal, genome:human, hg38:assembly, group:gene prediction, track: NCBI refseq  table:all  region:position:chrX  output format:GTF( have positions of seqs), output: hg38-refseq.gtf.gz, return:gzip, get output, subset
+
+### gff file format: second col is database, third is exome and so on, then location, +,- strands, id of genes inside the database
+
+### indexing
+cd ~/proj
+cd chrX
+cd chrX_data
+ls      
+cd genes    #### genes vim chrX.gtf similar to gtf file and have gene name,
+vim chrX.gtf     ###then exit from that
+cd genome    
+ls
+vim chrX.fa    ###vim is similar to nano
+esc  :q
+### hisat2-buid for making indexing and it take hours
+cd ../indexes/  ###go back by .. and open indexes files
+
+
+### whole genome indexes: in hisat2 website, right side , indexes, H.sapians, genome -snp -tran ...
+
+### quality control with fastQC:
+
+
+
+
+####Another way to install FastQC app by installing the conda app first
+mkdir -p ~/miniconda3
+curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3  #bash execute miniconda installer 
+#-b: This option tells the installer to run in "silent" mode, suppressing most output to the terminal.
+#-u: This option forces the installer to update any existing Miniconda installation to the latest version.
+#-p ~/miniconda3: This option specifies the installation path, telling the installer to install Miniconda in the ~/miniconda3 directory within your home directory.
+rm -rf ~/miniconda3/miniconda.sh
+#-r: This option tells rm to recursively remove directories and their contents, meaning it will delete not only the specified directory but also all files and subdirectories within it.
+#-f: This option stands for "force" and tells rm to ignore any warnings or prompts, forcefully deleting files without confirmation.
+# Install FastQC (if not installed)
+conda install -c bioconda fastqc
+fastqc your_raw_data.fastq    ####run fastqc on raw data in your mkdir QC folder
+scp -p 22222 bio@127.0.0:~/proj/chrX/../QC/*.html ~/Desktop #copy from source server to desktop
+##do the scp code on a new terminal page because current page connected to a server
+
+
+###Trimming with trim galore
+##Trim low quality base pair:
+# Install Trim Galore! (if not installed)
+conda install -c bioconda trim-galore
+trim_galore --quality 20 --length 50 --output_dir trimmed_data/ your_raw_data.fastq
+#This trims bases with quality below 20 and reads shorter than 50 bases.
+##mkdir for Trimming in related folder of data and link related sample fastq files to there
+#examle: cd.../chrX     mkdir TR     cd TR      ln -s ../samples/*.fastq .
+
+###Trimming with Trimomatic
+# Replace "input.fastq" and "output_trimmed.fastq" with your actual filenames
+java -jar trimmomatic-0.39.jar SE -phred33 input.fastq output_trimmed.fastq LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+#SE single end or PE for pair end  #leading mean cut bases off the start of each read below the quality of 3 #minlen lenth of read threshold
+#slideingwindow:4:15 : Perform a sliding window trimming, cutting once the average quality within the window falls below 15.
+#HEADCROP for remove 15 bases of init regardless of their quality
+# Replace "input_forward.fastq", "input_reverse.fastq", "output_forward_trimmed.fastq", and "output_reverse_trimmed.fastq" with your actual filenames
+java -jar trimmomatic-0.39.jar PE -phred33 input_forward.fastq input_reverse.fastq output_forward_trimmed.fastq output_forward_unpaired.fastq output_reverse_trimmed.fastq output_reverse_unpaired.fastq LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+###for apply trim for all files do as below:
+cd ~/proj/chrX/chrX.data/TR
+for f in *-1.fastq: do echo $f; done   #echo for print
+for f in *-1.fastq : do echo ${f/-1/-2}; done ##replacing -1 with -2 files for pair reads
+for f in *-1.fastq; do echo $f; do java -jar ~/app/Trimmo/Trimmo.. PE $f ${f/-1/-2} -baseout ${f/-chrX*/.fastq} HEADCROP:15 LEADING:30 TRAILING:30 MINLEN:50 & done
+# baseout make automatically apply -1,-2,u and so on and delete chrX and so on text(such as 188337_chrX_2.fastq to make one file)
+# without basout command we should define output file in code line 
+
+
+
+####DNA reads alignmets by BOWtie2
+conda install -c bioconda bowtie2
+##download FASTA of reference genome
+##then building index of reference genome
+bowtie2-build reference_genome.fa reference_index
+##aligning of reads
+bowtie2 -x reference_index -1 trimmed_forward.fastq -2 trimmed_reverse.fastq -S aligned_reads.sam
+# s * mean output SAM file of alignment results
+#then convert sam to bam for be more compact
+samtools view -bS aligned_reads.sam > aligned_reads.bam
+##sorting and indexign bam files for efficient downstream analyses:
+samtools sort aligned_reads.bam -o aligned_reads.sorted.bam
+samtools index aligned_reads.sorted.bam
+##Always perform QC before and after alignment to assess the quality of your data.
+#Tools like FastQC can be used for QC.
+
+#Visualize alignment results using genome browsers like IGV.
+
+
+###Step-by-Step Guide for RNA-Seq Read Alignment using HISAT2: first make related folder mkdir ALN then ln -s ../TR/*p.fastq .
+
+conda install -c bioconda hisat2
+hisat2-build reference_genome.fa reference_index
+hisat2 -x reference_index -1 trimmed_forward.fastq -2 trimmed_reverse.fastq -S aligned_reads.sam
+##for reading multiple sample files by one code:
+for f in *-1p.fastq; do hisat2 --dta -x ../indexes/chrx-tran.. -1 $f _2${f/-1/-2} -s ${f/-1*/.sam} -p 4;done
+#-dta for sticking transcripts specially unknown till now
+#intronlen mean some introns are large and some small, put on 20 if pairs have more than 20 seperated so not aligned
+#-s for sam output file    -p is for number of train
+
+#convert to bam and other functions is similar to bwt coding
+samtools view -bS aligned_reads.sam > aligned_reads.bam
+samtools sort aligned_reads.bam -o aligned_reads.sorted.bam
+samtools index aligned_reads.sorted.bam
+#Create an index for the sorted BAM file. This index allows for faster retrieval of specific genomic regions
+
+
+#Visualize alignment results using genome browsers like IGV.
+sc -p 22222 bio@... :~/proj/.../*.sam ~/Desktop
+##using IGV app (intergrated genome viewer) download and install and analysis
+#some part of app need for sorted files with BAM format
+
+
+
+###counting alignments to each gene by HTSeq:
+pip install htseq
+#using sorted and indexes bam files
+htseq-count -f bam -r pos -t exon -i gene_id --stranded=no sample_aligned_sorted.bam genes.gtf > counts.txt
+#gene annotation file in GTF format (genes.gtf) #-f bam: Specifies that the input file is in BAM format. 
+#-r pos: For paired-end reads, this option specifies that the read with a positive strand will be counted. 
+#-t exon: Specifies the feature type to be considered (e.g., exons).
+#-i gene_id: Specifies the attribute used as the feature identifier (e.g., gene_id).
+#--stranded=no: Indicates that the data is not strand-specific.
+
+#for multiple files:
+for f in *.sam; do htseq-count -q -i gene_name $f ../genes/chr.gtf > ${f/.sam/.count};done
+
+
+
+
+

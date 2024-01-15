@@ -1,0 +1,50 @@
+####here is for analysis of gene expression differentiate in different sample of highthroughtput sequencing raw data analysis
+##using R for analysis
+setwd ("~/Desktop/shrif/RNAseq/")
+x <- matrix(round(runif(100,0,15)),nrow=100)
+rownames(x) <- paste0("Gene", 1:100) #paste0 to have not any seperate between gene and its number
+write.table(x,file="Sample1.txt", col.names=F, quote=F)
+files <- list.files(".",".txt") ##paste file here which have .txt
+counts <- lapply(files, read.delim, header=F) #read.delim is a versatile function for reading various text file formats.
+#Specifying header=F is crucial when files lack header rows to ensure correct data interpretation. do not make the first row as  the header
+#each files have only one gene name col and one hseq count col
+class(counts) #show as list with 6 leng(we have 6 sample file)
+counts <- do.call(cbind, counts, stringAsFactors=F,) ##binding the columns of 6 files of counts together
+#Numerical strings (e.g., "2023", "4.56") that you want to treat as numbers for calculations. so not stringasfactor
+#can use options(stringAsFactors=F) at the begining of coding
+rownames(counts) <- counts[ ,1]
+counts <- counts[ ,-seq(1,ncol(counts),2)] #remove even columns which is cbind in previous and are repetetive of rownames which one define and we do not need it again
+col.names(counts) <- sub(".txt", "",files) #Removes the ".txt" extension from each filename.
+#till here is for making related documents
+
+setRepositories()
+#1 2 #to choose the bioconductor
+install.packages("Desq2")
+library(Deseq2, ggplot2, limma, pheatmap,gplots,reshape2,plyr)
+?Deseq2
+
+###Terminal coding
+# cd ~/Desktop/RNAseq/
+#scp -p 2222 bio@.... :~/proj/chrX/.../ALN/*.count .
+
+files <- list.files(".", "*.count")
+counts <- lapply(files, read.delim, header = F , comment.char = "_") #comment.char = "_": This parameter specifies that lines starting with the underscore character (_) in the data file should be treated as comments and ignored during the reading process.
+class(counts)
+counts <- do.call(cbind, counts)
+rownames(counts) <- counts[ ,1]
+counts <- counts[ ,-seq(1,ncol(counts), 2)]
+colnames(counts) <- sub(".count"," ", files)
+gr <- factor(c(rep("YRI",3),rep("GBR", 2), "YRI", rep("GBR", 4), rep("YRI", 2))) ##for 12 sample name
+colData <- data.frame(group = gr, type = "paired_end")
+cds <- DESeqDataSetFromMatrix(counts, colData, design = group)
+cds <- DESeq(cds) ###for normalization
+cnt <- counts(cds, normalized=T)  ###counts here is the counting function not the cout table
+cnt <- log2(1 + counts(cds, normalized = T ))
+boxplot(cnt)
+
+dif <- results(cnt, c("group", "YRI","GRE"))  ###this is showing the pvalue of this two group gene expression
+dif <- data.frame(cnt, c("group", "YRI","GRE"))
+dif$padj <- p.adjust(dif$pvalue, method = "BH") ###changing the pvalue method
+#p.adjust(): This function is used for adjusting p-values for multiple testing. It takes the vector of raw p-values (dif$value) as input.
+dif <- dif[order(dif$padj), ]
+ggplot2(dif,aes(log2Foldchange, -log10(pvalue)),color = log2Foldchange)+ geom_point() +theme_bw()
