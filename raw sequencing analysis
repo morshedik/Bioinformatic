@@ -190,3 +190,4 @@ for f in *.sam; do htseq-count -q -i gene_name $f ../genes/chr.gtf > ${f/.sam/.c
 
 
 
+word
