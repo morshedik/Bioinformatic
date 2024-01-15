@@ -1,5 +1,6 @@
 ####here is for analysis of gene expression differentiate in different sample of highthroughtput sequencing raw data analysis
 ##using R for analysis
+#testing git
 setwd ("~/Desktop/shrif/RNAseq/")
 x <- matrix(round(runif(100,0,15)),nrow=100)
 rownames(x) <- paste0("Gene", 1:100) #paste0 to have not any seperate between gene and its number
